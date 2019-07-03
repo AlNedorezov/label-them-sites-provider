@@ -4,3 +4,5 @@ chromedriver
 geckodriver
 selenium-server*
 .idea
+output*
+input.conf.json

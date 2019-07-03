@@ -58,13 +58,27 @@ function getContainerNode(elements, points, deviation) {
   return searchContainers.minAreaContainer();
 }
 
+const deviation = 15;
 const fs = require('fs');
 const myArgs = process.argv.slice(2);
-const elementsPath = myArgs[0];
-const dataJSON = myArgs[1];
-const elements = JSON.parse(fs.readFileSync(elementsPath, {encoding: 'utf-8'}));
-console.log(dataJSON);
-const data = JSON.parse(dataJSON);
-const deviation = 15;
-
-console.log(JSON.stringify(getContainerNode(elements, data[0].points, deviation), undefined, 2))
+const outputPath = myArgs[0];
+const data = JSON.parse(fs.readFileSync(`${outputPath}/toloka.response.json`, {encoding: 'utf-8'}));
+const processedResult = data.items.map(item => {
+  const fileName = item.tasks[0].input_values.image_rel.split('/').slice(-1)[0]
+  const encodedUrl = fileName.split('.')[0];
+  const elements = JSON.parse((fs.readFileSync(`${outputPath}/metadata/${encodedUrl}.json`, {encoding: 'utf-8'})));
+  const result = JSON.parse(item.solutions[0].output_values.result)
+  return {
+    url: Buffer.from(encodedUrl, 'base64').toString('utf-8'),
+      result: result.map(polygon => {
+    const {points} = polygon
+    return {
+      ...polygon,
+      metadata: {
+        elementsSubTree: getContainerNode(elements, points, deviation)
+      }
+    }
+  })
+  }
+})
+fs.writeFileSync(`${outputPath}/results.json`, JSON.stringify(processedResult))
